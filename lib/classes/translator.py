@@ -15,6 +15,14 @@ except ImportError:
     DEEP_TRANSLATOR_AVAILABLE = False
     print("Warning: deep-translator not installed. Translation features disabled.")
 
+# Import ArgosTranslator
+try:
+    from lib.classes.argos_translator import ArgosTranslator
+    ARGOS_AVAILABLE = True
+except ImportError:
+    ARGOS_AVAILABLE = False
+    print("Warning: ArgosTranslator modules not found.")
+
 
 # Language mapping for deep-translator (ISO 639-1 codes)
 SUPPORTED_LANGUAGES = {
@@ -61,13 +69,23 @@ class TranslationService:
         Initialize translation service
         
         Args:
-            service: Translation backend - 'google' or 'mymemory'
+            service: Translation backend - 'google', 'mymemory', or 'argos'
         """
         self.service = service
         self.max_chunk_size = 4500  # Google Translate limit per request
+        self.argos = None
         
-        if not DEEP_TRANSLATOR_AVAILABLE:
+        if not DEEP_TRANSLATOR_AVAILABLE and service in ['google', 'mymemory']:
             raise ImportError("deep-translator library is not installed. Run: pip install deep-translator")
+            
+        if service == 'argos':
+            if not ARGOS_AVAILABLE:
+                raise ImportError("ArgosTranslator modules not found.")
+            try:
+                self.argos = ArgosTranslator()
+                print("ArgosTranslator initialized.")
+            except Exception as e:
+                print(f"Failed to initialize ArgosTranslator: {e}")
     
     def detect_language(self, text: str) -> Tuple[str, float]:
         """
@@ -87,8 +105,22 @@ class TranslationService:
         except LangDetectException:
             return 'en', 0.5  # Default to English if detection fails
     
-    def get_supported_languages(self) -> Dict[str, str]:
-        """Get dictionary of supported languages"""
+    def get_supported_languages(self, service: Optional[str] = None) -> Dict[str, str]:
+        """Get dictionary of supported languages based on service"""
+        svc = service if service else self.service
+        
+        if svc == 'argos' and self.argos:
+            # Argos supported targets depend on the installed packages and available downloads
+            # For simplicity, we can fetch all potential targets from ArgosTranslator
+            try:
+                # This is a bit complex as Argos has source-dependent targets
+                # We will just return a generic list or maybe just English to X for now
+                # Or better, let the UI handle the dynamic list via a separate call
+                # For now, let's return the intersection of our map and what Argos supports generally
+                return SUPPORTED_LANGUAGES.copy() # Placeholder, we might need a specific map
+            except:
+                return SUPPORTED_LANGUAGES.copy()
+        
         return SUPPORTED_LANGUAGES.copy()
     
     def _chunk_text(self, text: str) -> List[str]:
@@ -132,7 +164,7 @@ class TranslationService:
         Returns:
             Tuple of (success: bool, translated_text: str, error_message: str)
         """
-        if not DEEP_TRANSLATOR_AVAILABLE:
+        if self.service == 'google' and not DEEP_TRANSLATOR_AVAILABLE:
             return False, "", "Translation library not available"
         
         if source_lang == target_lang:
@@ -140,14 +172,48 @@ class TranslationService:
         
         try:
             # Create translator instance
-            if self.service == 'google':
+            uploaded_model = False
+            
+            if self.service == 'argos':
+                if not self.argos:
+                    return False, "", "ArgosTranslator not initialized"
+                
+                # Argos logic
+                print(f"Translating via Argos: {source_lang} -> {target_lang}")
+                error, success = self.argos.start(source_lang, target_lang)
+                if not success:
+                    return False, "", f"Argos setup failed: {error}"
+                
+                # Argos processes text directly, but might need chunking if too large?
+                # Usually offline models handle sentences.
+                # Let's chunk anyway to be safe and provide progress
+                chunks = self._chunk_text(text)
+                total_chunks = len(chunks)
+                translated_chunks = []
+                
+                for i, chunk in enumerate(chunks):
+                    if progress_callback:
+                        progress = (i / total_chunks) * 100
+                        progress_callback(progress, f"Translating chunk {i+1}/{total_chunks}...")
+                    
+                    trans, status = self.argos.process(chunk)
+                    if status:
+                        translated_chunks.append(trans)
+                    else:
+                        print(f"Chunk translation failed: {trans}")
+                        translated_chunks.append(chunk) # Fallback to original
+                
+                translated_text = ' '.join(translated_chunks)
+                return True, translated_text, ""
+
+            elif self.service == 'google':
                 translator = GoogleTranslator(source=source_lang, target=target_lang)
             elif self.service == 'mymemory':
                 translator = MyMemoryTranslator(source=source_lang, target=target_lang)
             else:
                 return False, "", f"Unknown translation service: {self.service}"
             
-            # Chunk text for large documents
+            # Chunk text for large documents (Online services)
             chunks = self._chunk_text(text)
             total_chunks = len(chunks)
             translated_chunks = []

@@ -104,16 +104,43 @@ https://github.com/user-attachments/assets/81c4baad-117e-4db5-ac86-efc2b7fea921
 - [Table of Contents](#table-of-contents)
 
 
+
+# 🚀 What's New in This Version
+This fork significantly enhances the original `ebook2audiobook` with pro-level features:
+
+### ⚡ Performance & Hardware
+*   **AMD ROCm Support**: Native Docker support for AMD GPUs (ROCm 6.1). No more CPU-only crawling for AMD users!
+*   **Efficient Build**: Optimized Docker build process to ensure correct hardware drivers are loaded.
+
+### 🤖 New TTS Engine: Supertonic
+*   **High-Fidelity Audio**: Native 44.1kHz sampling rate for crystal clear audio.
+*   **Versatile Styles**: 10 built-in voice styles including **Male, Female, Child, and Elder** variations.
+*   **Optimized Models**: Specialized presets for 'Speed', 'High Quality', and 'English-Optimized' generation.
+*   **Multi-Lingual**: Extensive support for global languages with dedicated fine-tunes.
+
+### 🛠️ Advanced Tools
+*   **Chapter Editor Overlay**: A powerful new visual editor to:
+    *   Preview chapter text before conversion.
+    *   **Segment Text**: Automatically splits long chapters based on specific TTS engine limits (XTTS, Bark, etc.).
+    *   **Translate In-Place**: Instantly translate specific segments to other languages.
+    *   **Manual Edits**: Fix typos or remove unwanted text manually.
+*   **Force OCR**: A new "Force OCR" mode for PDF documents that are technically "text" but garbled. Forces Tesseract to re-read everything.
+
+### 🛑 Control
+*   **Job Cancellation**: Full control to **stop** any ongoing process (Text-to-Speech or OCR) instantly.
+*   **Real-time Progress**: Visual progress bars for OCR and heavy tasks.
+
+---
+
 ## Features
-- 📚 Splits eBook into chapters for organized audio.
-- 📝 **Advanced Chapter Editor**: Segmentation based on TTS engine limits, in-place translation, and manual editing overlay.
-- 🛑 **Job Cancellation**: Stop ongoing TTS conversion or OCR jobs instantly.
-- 🔍 **Force OCR**: Handle tricky PDFs by forcing OCR processing with real-time progress updates.
-- ⚡ **AMD ROCm Support**: GPU acceleration support for AMD graphics cards (v6.1).
-- 🎙️ High-quality text-to-speech with [Coqui XTTSv2](https://huggingface.co/coqui/XTTS-v2) and [Fairseq](https://github.com/facebookresearch/fairseq/tree/main/examples/mms) (and more).
-- 🗣️ Optional voice cloning with your own voice file.
-- 🌍 Supports +1110 languages (English by default). [List of Supported languages](https://dl.fbaipublicfiles.com/mms/tts/all-tts-languages.html)
-- 🖥️ Designed to run on 4GB RAM.
+- 📚 **Smart Chapter Splitting**: Intelligently parses eBooks into logical chapters.
+- 📝 **Advanced Editing**: Full control over text segmentation and content before audio generation.
+- 🤖 **Supertonic TTS**: New 44.1kHz engine with diverse voice styles (Child, Elder, etc.).
+- 🌐 **Offline Translation**: Fully privacy-focused translation using **Argos Translate**. No internet required.
+- 🎙️ **High-Quality TTS**: Integrated with [Coqui XTTSv2](https://huggingface.co/coqui/XTTS-v2), [Fairseq MMS](https://github.com/facebookresearch/fairseq/tree/main/examples/mms), Bark, and more.
+- 🗣️ **Voice Cloning**: Clone any voice from a short audio sample.
+- 🌍 **+1100 Languages**: Massive language support via Facebook's MMS project.
+- 🖥️ **Resource Friendly**: Optimized to run on consumer hardware (4GB RAM min).
 
 
 ## Supported Languages
@@ -405,6 +432,16 @@ By Default: All compose containers share the contents your local `ebook2audioboo
 ### Common Docker Issues
 
 - My NVIDIA GPU isnt being detected?? -> [GPU ISSUES Wiki Page](https://github.com/DrewThomasson/ebook2audiobook/wiki/GPU-ISSUES)
+
+### 🔴 AMD ROCm / GPU Support
+**For AMD GPU Users:**
+This version includes built-in support for **ROCm 6.1**.
+- **Windows Users**: The container will default to CPU mode to ensure stability. No action required.
+- **Linux / WSL2 Users**: To enable GPU acceleration:
+  1. Open `docker-compose.yml`.
+  2. Uncomment the `devices:` section (lines for `/dev/kfd` and `/dev/dri`).
+  3. Uncomment the `group_add:` section.
+  4. Run `docker-compose up -d`.
 
 
 ## Fine Tuned TTS models

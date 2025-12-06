@@ -45,7 +45,7 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install deep-translator
+
 
 EXPOSE 7860
 ENTRYPOINT ["python3", "app.py", "--script_mode", "full_docker"]

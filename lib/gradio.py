@@ -2135,8 +2135,9 @@ def build_interface(args:dict)->gr.Blocks:
                     <div class="translation-form-group">
                         <label class="translation-form-label">Translation Service</label>
                         <select id="translation_service" class="translation-form-select">
-                            <option value="google">Google Translate</option>
-                            <option value="mymemory">MyMemory</option>
+                            <option value="google">Google Translate (Online)</option>
+                            <option value="argos">Argos Translate (Offline)</option>
+                            <!-- <option value="mymemory">MyMemory</option> -->
                         </select>
                     </div>
                     <div id="translation_progress" class="translation-progress" style="display: none;">
