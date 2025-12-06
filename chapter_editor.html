@@ -1,0 +1,46 @@
+<div id="chapter-editor-content">
+    <div class="editor-header">
+        <h2>Chapter Editor</h2>
+        <div class="header-controls">
+            <label style="margin-right: 15px;">
+                Translate to:
+                <select id="targetLangSelect"
+                    style="background:var(--input-bg);color:var(--text-color);border:1px solid var(--border-color);border-radius:4px;padding:2px 5px;">
+                    <!-- PYTHON_LANGUAGE_OPTIONS -->
+                </select>
+            </label>
+            <label><input type="checkbox" id="selectAllChk"
+                    onclick="(function(){var c=document.getElementById('selectAllChk').checked;document.querySelectorAll('#chapterBody .chk-cell input').forEach(function(cb){cb.checked=c;cb.closest('tr').classList.toggle('selected',c);});})()">
+                Select All</label>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <table id="chapterTable">
+            <thead>
+                <tr>
+                    <th class="chk-cell">☑</th>
+                    <th class="num-cell">#</th>
+                    <th>Content</th>
+                    <th class="del-cell"></th>
+                </tr>
+            </thead>
+            <tbody id="chapterBody">
+                <!-- PYTHON_CHAPTERS_HTML -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="actions">
+        <button class="btn-editor btn-danger"
+            onclick="(function(){document.querySelectorAll('#chapterBody tr.selected').forEach(function(r){r.remove();});document.querySelectorAll('#chapterBody tr').forEach(function(r,i){r.querySelector('.num-cell').textContent=i+1;});document.getElementById('selectAllChk').checked=false;})()">Delete
+            Selected</button>
+        <div style="display:flex;gap:10px;">
+            <button class="btn-editor btn-cancel"
+                onclick="(function(){var o=document.getElementById('gr_chapter_editor_overlay');if(o){o.style.display='none';o.innerHTML='';}})()">Cancel</button>
+            <button class="btn-editor btn-save"
+                onclick="(function(){var d=document.querySelector('#gr_chapters_data textarea');if(d){var rows=document.querySelectorAll('#chapterBody textarea');var chapters=[];rows.forEach(function(t){if(t.value.trim())chapters.push(t.value.trim());});var lang=document.getElementById('targetLangSelect').value;d.value=JSON.stringify({chapters:chapters, target_lang:lang});d.dispatchEvent(new Event('input',{bubbles:true}));var b=document.getElementById('gr_save_chapters_btn');if(b)b.click();}var o=document.getElementById('gr_chapter_editor_overlay');if(o){o.style.display='none';o.innerHTML='';}})()">Save
+                Changes</button>
+        </div>
+    </div>
+</div>

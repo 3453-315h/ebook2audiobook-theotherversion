@@ -1,0 +1,17 @@
+python_env/
+tmp/
+ebooks/
+audiobooks/
+models/
+voices/
+__pycache__/
+*.log
+*.pyc
+.DS_Store
+.env
+venv/
+.idea/
+.vscode/
+ebook2audiobook.egg-info/
+.installed
+.bh.ps1
