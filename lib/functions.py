@@ -1798,7 +1798,16 @@ def convert_chapters2audio(id:str)->bool:
                             t.set_description(f"{percentage:.2f}%")
                             msg = f' : {sentence}' if is_sentence else f' : {sentence}'
                             print(msg)
+                            # Verify file existence
+                            expected_file = os.path.join(session['chapters_dir_sentences'], f"{sentence_number}.{default_audio_proc_format}")
+                            if not os.path.exists(expected_file):
+                                print(f"[CRITICAL ERROR] TTS claimed success but file is missing: {expected_file}")
+                            else:
+                                size = os.path.getsize(expected_file)
+                                if size == 0:
+                                    print(f"[CRITICAL ERROR] TTS produced 0-byte file: {expected_file}")
                         else:
+                            print(f"[ERROR] TTS conversion returned False for sentence {sentence_number}: {sentence[:50]}...")
                             return False
                     if sentence.strip() not in TTS_SML.values():
                         sentence_number += 1
@@ -1835,6 +1844,8 @@ def combine_audio_sentences(file:str, start:int, end:int, id:str)->bool:
             f for f in os.listdir(chapters_dir_sentences)
             if f.endswith(f'.{default_audio_proc_format}')
         ]
+        print(f"[DEBUG] combine_audio_sentences: found {len(sentence_files)} files in {chapters_dir_sentences}")
+        print(f"[DEBUG] session['is_gui_process'] type: {type(is_gui_process)}, value: {is_gui_process}")
         sentences_ordered = sorted(
             sentence_files, key=lambda x: int(os.path.splitext(x)[0])
         )
@@ -2205,6 +2216,10 @@ def combine_audio_chapters(id:str)->list[str]|None:
         return None
 
 def assemble_chunks(txt_file:str, out_file:str, is_gui_process:bool)->bool:
+    print(f"[DEBUG] assemble_chunks called with: txt={txt_file}, out={out_file}, gui={is_gui_process}")
+    if txt_file is None:
+        print("[ERROR] assemble_chunks: txt_file is None!")
+        return False
     try:
         total_duration = 0.0
         try:

@@ -1554,6 +1554,16 @@ def build_interface(args:dict)->gr.Blocks:
                     # Populate choices from language_mapping keys or a default list if not yet defined at this point
                     # We'll use a placeholder for now and populate it in show_chapter_editor_overlay if dynamic update is needed
                     # But ideally we want it static. Let's assume language_mapping is available.
+                    gr_chapter_trans_service = gr.Dropdown(
+                        label=None,
+                        show_label=False,
+                        choices=[("Google Translate", "google"), ("Argos Translate (Offline)", "argos")],
+                        value="google",
+                        interactive=True,
+                        elem_id="gr_chapter_trans_service",
+                        scale=1,
+                        container=False
+                    )
                     gr_chapter_trans_lang = gr.Dropdown(
                         label=None,
                         show_label=False, 
@@ -3137,8 +3147,13 @@ def build_interface(args:dict)->gr.Blocks:
                     traceback.print_exc()
                     return gr.update(value=[], visible=False), gr.update(visible=False), gr.update(visible=False)
 
-            def save_chapters_from_overlay(dataframe_data, target_lang, id_or_session:str|dict):
-                print(f"[DEBUG] save_chapters_from_overlay CALLED with target_lang={target_lang}")
+            def save_chapters_from_overlay(dataframe_data, target_lang, service, id_or_session:str|dict):
+                """
+                Save edited chapters from the overlay back to the session.
+                Use 'id' to find the session.
+                If target_lang is provided, trigger translation of the document.
+                """
+                print(f"[DEBUG] save_chapters_from_overlay called with target_lang={target_lang}, service={service}")
                 try:
                     if isinstance(id_or_session, dict):
                         id = id_or_session.get('id')
@@ -3163,7 +3178,7 @@ def build_interface(args:dict)->gr.Blocks:
                     update_session_chapters(id, new_chapters)
                     
                     if target_lang:
-                        print(f"Chapter Editor: Triggering translation to {target_lang}")
+                        print(f"Chapter Editor: Triggering translation to {target_lang} using {service}")
                         session = context.get_session(id)
                         
                         # Save current chapters to a temporary file for translation
@@ -3177,8 +3192,9 @@ def build_interface(args:dict)->gr.Blocks:
                         session['txt_file'] = temp_input_path
                         
                         from lib.classes.translator import translate_document
-                        # Default to google for now
-                        success, translated_path, error = translate_document(session, target_lang, 'google')
+                        
+                        # Use selected service
+                        success, translated_path, error = translate_document(session, target_lang, service=service)
                         
                         if success:
                              print(f"Chapter Editor: Translation successful to {translated_path}")
@@ -3220,9 +3236,9 @@ def build_interface(args:dict)->gr.Blocks:
             def cancel_chapter_editor():
                  return gr.update(visible=False), gr.update(visible=False)
 
-            def translate_chapters_in_place(dataframe_data, target_lang, id_or_session:str|dict):
+            def translate_chapters_in_place(dataframe_data, target_lang, service, id_or_session:str|dict):
                 """Translate chapters in-place and update the dataframe without closing overlay."""
-                print(f"[DEBUG] translate_chapters_in_place CALLED with target_lang={target_lang}")
+                print(f"[DEBUG] translate_chapters_in_place CALLED with target_lang={target_lang}, service={service}")
                 try:
                     if not target_lang:
                         show_alert({"type": "warning", "msg": "⚠️ Please select a translation target language first."})
@@ -3256,7 +3272,9 @@ def build_interface(args:dict)->gr.Blocks:
                     
                     # Import translator
                     from lib.classes.translator import TranslationService
-                    translator = TranslationService('google')
+                    if service == 'argos':
+                        show_alert({"type": "info", "msg": "🔄 Initializing Argos Translate... (Model download may occur)"})
+                    translator = TranslationService(service)
                     
                     # Detect source language from first segment
                     source_lang = 'auto'
@@ -3342,13 +3360,13 @@ def build_interface(args:dict)->gr.Blocks:
             
             gr_chapter_translate_btn.click(
                 fn=translate_chapters_in_place,
-                inputs=[gr_chapter_dataframe, gr_chapter_trans_lang, gr_session],
+                inputs=[gr_chapter_dataframe, gr_chapter_trans_lang, gr_chapter_trans_service, gr_session],
                 outputs=[gr_chapter_dataframe]
             )
             
             gr_chapter_save_btn.click(
                 fn=save_chapters_from_overlay,
-                inputs=[gr_chapter_dataframe, gr_chapter_trans_lang, gr_session],
+                inputs=[gr_chapter_dataframe, gr_chapter_trans_lang, gr_chapter_trans_service, gr_session],
                 outputs=[gr_chapter_editor_group, gr_glassmask]
             )
             
@@ -3357,6 +3375,7 @@ def build_interface(args:dict)->gr.Blocks:
                 inputs=None,
                 outputs=[gr_chapter_editor_group, gr_glassmask]
             )
+            
             gr_confirm_blocks_yes_btn.click(
                 fn=lambda session: confirm_blocks("yes", session),
                 inputs=[gr_session],

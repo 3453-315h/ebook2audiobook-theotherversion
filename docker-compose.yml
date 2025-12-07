@@ -1,64 +1,101 @@
+# =============================================================================
+# Ebook2Audiobook Docker Compose Configuration
+# =============================================================================
+# DEFAULT: CPU-only (works on all systems)
+# For GPU support, see the GPU CONFIGURATION section below
+# =============================================================================
+
 services:
   ebook2audiobook:
-    #image: docker.io/athomasson2/ebook2audiobook:latest  # <-- Use prebuilt image instead of building
+    # Use prebuilt image (faster) or build locally (comment out image, uncomment build)
+    # image: docker.io/athomasson2/ebook2audiobook:latest
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        # Force ROCm build config
-        DOCKER_DEVICE_STR: '{"name": "rocm", "os": "manylinux_2_28", "arch": "x86_64", "pyvenv": ["3", "12"], "tag": "rocm6.1"}'
+        # -----------------------------------------------------------------------
+        # DEVICE CONFIGURATION - Choose ONE of the following:
+        # -----------------------------------------------------------------------
+        # CPU (Default - works everywhere):
+        DOCKER_DEVICE_STR: '{"name": "cpu", "os": "manylinux_2_28", "arch": "x86_64", "pyvenv": ["3", "12"], "tag": "cpu"}'
+
+        # NVIDIA CUDA (uncomment for NVIDIA GPUs):
+        # DOCKER_DEVICE_STR: '{"name": "cuda", "os": "manylinux_2_28", "arch": "x86_64", "pyvenv": ["3", "12"], "tag": "cu121"}'
+
+        # AMD ROCm (uncomment for AMD GPUs):
+        # DOCKER_DEVICE_STR: '{"name": "rocm", "os": "manylinux_2_28", "arch": "x86_64", "pyvenv": ["3", "12"], "tag": "rocm6.1"}'
+
+        # Intel XPU (uncomment for Intel GPUs):
+        # DOCKER_DEVICE_STR: '{"name": "xpu", "os": "manylinux_2_28", "arch": "x86_64", "pyvenv": ["3", "12"], "tag": "xpu"}'
+        # -----------------------------------------------------------------------
+
+        # Required system dependencies - DO NOT MODIFY
+        DOCKER_PROGRAMS_STR: "curl ffmpeg nodejs espeak-ng cargo rustc sox tesseract-ocr"
+        ISO3_LANG: "eng"
+
     container_name: ebook2audiobook
     working_dir: /app
-    # To update ebook2audiobook to the latest you may have to rebuild  
-    # entrypoint: [ "python", "app.py", "--script_mode", "full_docker" ]
+
+    # Startup command - installs deep-translator and launches the app
     entrypoint: [ "sh", "-c", "pip install deep-translator && python app.py --script_mode full_docker" ]
-    command: [] # <- Extra ebook2audiobook parameters can be added here
-    # The dir containing this docker-compose.yml file will be used as the base directory for any commands.
-    # Example Headless || command: ["--headless", "--ebook", "The-Tell-Tale-Heart.epub", "--tts_engine", "yourtts"] # "The-Tell-Tale-Heart.epub" file is located in the same dir as this docker-compose.yml. # More compose headless info can be found at wiki "https://github.com/DrewThomasson/ebook2audiobook/wiki/Docker-Compose-Headless-guide"
+    command: [] # Add extra arguments here, e.g., ["--share"] or ["--headless", "--ebook", "book.epub"]
+
     tty: true
     stdin_open: true
-    environment:
-      # Common override for RDNA2/3 cards if not natively supported
-      - HSA_OVERRIDE_GFX_VERSION=10.3.0
+
     ports:
-      - 7860:7860 # Maps container's port 7860 to the host's port 7860.
+      - 7860:7860 # Web UI port
 
-    # ---------------------------------------------------
-    # UNIVERSAL GPU SUPPORT (NVIDIA + ROCm + Intel XPU)
-    # ---------------------------------------------------
+    volumes:
+      - ./:/app # Maps local directory to container
+      - ./lib:/app/lib # Ensures lib changes are reflected
+    # =========================================================================
+    # GPU CONFIGURATION (Optional - uncomment the section for your GPU)
+    # =========================================================================
 
-    # NVIDIA (WSL2 + Linux)
-    runtime: nvidia
+    # -------------------------------------------------------------------------
+    # NVIDIA GPU (requires NVIDIA Container Toolkit)
+    # Uncomment the following lines for NVIDIA GPU support:
+    # -------------------------------------------------------------------------
+    # runtime: nvidia
+    # environment:
+    #   - NVIDIA_VISIBLE_DEVICES=all
+    #   - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
 
-    # AMD ROCm + Intel XPU + NVIDIA /dev/dri path
-    # Commented out for Windows compatibility - uncomment on Linux with AMD/Intel GPU
+    # -------------------------------------------------------------------------
+    # AMD ROCm GPU (Linux only)
+    # Uncomment the following lines for AMD GPU support:
+    # -------------------------------------------------------------------------
     # devices:
-    #   - /dev/kfd # AMD ROCm (ignored if missing)
-    #   - /dev/dri # Intel XPU + NVIDIA (ignored if missing)
-
-    # Needed for ROCm (ignored if missing)
+    #   - /dev/kfd
+    #   - /dev/dri
     # group_add:
     #   - video
     #   - render
+    # environment:
+    #   - HSA_OVERRIDE_GFX_VERSION=10.3.0  # Adjust for your GPU (RDNA2=10.3.0, RDNA3=11.0.0)
 
-    # Additional optional NVIDIA request (ignored on non-NVIDIA)
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [ "gpu" ]
-        limits: {} # Keeps limits as an empty mapping to avoid errors. Uncomment and configure below.
+    # -------------------------------------------------------------------------
+    # Intel XPU (Linux only)
+    # Uncomment the following lines for Intel GPU support:
+    # -------------------------------------------------------------------------
+    # devices:
+    #   - /dev/dri
 
-    volumes:
-      - ./:/app # Maps the local directory to the container.
-
-# Common Issues: ----
-# --> `python: can't open file '/home/user/app/app.py': [Errno 2] No such file or directory`
-# Removed all post arguments as CMD was replaced with ENTRYPOINT in the Dockerfile  
-# Example correction:  
-# Before: command: ["python", "app.py", "--script_mode", "full_docker"] or -> `docker run athomasson2/ebook2audiobook python app.py --script_mode full_docker`
-# After: nothing needed  or just -> `docker run athomasson2/ebook2audiobook`
-# Extra arguments after app.py can still be added to the -> command: [] 
-# Example adding extra arguments -> command: ["--share"] or -> command: ["--help"]
+    # =============================================================================
+    # QUICK START EXAMPLES:
+    # =============================================================================
+    # 1. CPU-only (default):    docker-compose up -d --build
+    # 2. View logs:             docker logs -f ebook2audiobook
+    # 3. Stop:                  docker-compose down
+    # 4. Rebuild after changes: docker-compose up -d --build --force-recreate
+    #
+    # For headless mode, add to command: ["--headless", "--ebook", "mybook.epub"]
+    # =============================================================================
