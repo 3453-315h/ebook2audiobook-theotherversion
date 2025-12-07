@@ -1,0 +1,69 @@
+# =============================================================================
+# Ebook2Audiobook - Oracle Cloud Free Tier Configuration
+# =============================================================================
+# Optimized for: Ampere A1 ARM64 (4 OCPUs, 24GB RAM)
+# TTS Engines: VITS, Fairseq, YourTTS (best for ARM CPU)
+# =============================================================================
+
+services:
+  ebook2audiobook:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        # CPU-only for Oracle Cloud Free Tier (no GPU available)
+        DOCKER_DEVICE_STR: '{"name": "cpu", "os": "manylinux_2_28", "arch": "aarch64", "pyvenv": ["3", "12"], "tag": "cpu"}'
+        DOCKER_PROGRAMS_STR: "curl ffmpeg nodejs espeak-ng cargo rustc sox tesseract-ocr"
+        ISO3_LANG: "eng"
+
+    container_name: ebook2audiobook
+    working_dir: /app
+
+    # Startup command
+    entrypoint: [ "sh", "-c", "pip install deep-translator && python app.py --script_mode full_docker" ]
+    command: []
+
+    tty: true
+    stdin_open: true
+
+    # Memory limits for 24GB free tier instance
+    deploy:
+      resources:
+        limits:
+          memory: 20G # Leave 4GB for OS
+        reservations:
+          memory: 8G
+
+    ports:
+      - 7860:7860
+
+    volumes:
+      - ../:/app
+      - ../lib:/app/lib
+      - ./audiobooks:/app/audiobooks # Persistent audiobook storage
+
+    # Restart policy for always-on operation
+    restart: unless-stopped
+
+    # Environment optimizations for ARM CPU
+    environment:
+      - PYTORCH_ENABLE_MPS_FALLBACK=0
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+      # Reduce Bark model size if used (saves memory)
+      - SUNO_USE_SMALL_MODELS=True
+      - SUNO_OFFLOAD_CPU=True
+
+# =============================================================================
+# RECOMMENDED TTS ENGINES FOR FREE TIER:
+# =============================================================================
+# 1. VITS       - Best performance on ARM, ~2GB RAM, fast
+# 2. Fairseq    - Great quality, ~3GB RAM, fast  
+# 3. YourTTS    - Voice cloning support, ~4GB RAM
+# 4. Tacotron2  - Classic quality, ~3GB RAM
+#
+# AVOID on Free Tier:
+# - Bark (12GB+ RAM, very slow on ARM)
+# - XTTSv2 (6GB+, slower on ARM)
+# - Supertonic (8GB+, may be slow)
+# =============================================================================
