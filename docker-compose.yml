@@ -80,7 +80,13 @@ services:
     #   - video
     #   - render
     # environment:
-    #   - HSA_OVERRIDE_GFX_VERSION=10.3.0  # Adjust for your GPU (RDNA2=10.3.0, RDNA3=11.0.0)
+    #   # HSA_OVERRIDE_GFX_VERSION - Set based on your GPU architecture:
+    #   # Vega 56/64:      HSA_OVERRIDE_GFX_VERSION=9.0.0
+    #   # Vega VII:        HSA_OVERRIDE_GFX_VERSION=9.0.6
+    #   # RDNA1 (RX 5000): HSA_OVERRIDE_GFX_VERSION=10.1.0
+    #   # RDNA2 (RX 6000): HSA_OVERRIDE_GFX_VERSION=10.3.0
+    #   # RDNA3 (RX 7000): HSA_OVERRIDE_GFX_VERSION=11.0.0
+    #   - HSA_OVERRIDE_GFX_VERSION=10.3.0
 
     # -------------------------------------------------------------------------
     # Intel XPU (Linux only)

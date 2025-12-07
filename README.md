@@ -110,6 +110,14 @@ This fork significantly enhances the original `ebook2audiobook` with pro-level f
 
 ### ⚡ Performance & Hardware
 *   **AMD ROCm Support**: Native Docker support for AMD GPUs (ROCm 6.1). No more CPU-only crawling for AMD users!
+    *   Set `HSA_OVERRIDE_GFX_VERSION` based on your GPU:
+        | GPU Series | GFX Version |
+        |------------|-------------|
+        | Vega 56/64 | `9.0.0` |
+        | Vega VII   | `9.0.6` |
+        | RX 5000 (RDNA1) | `10.1.0` |
+        | RX 6000 (RDNA2) | `10.3.0` |
+        | RX 7000 (RDNA3) | `11.0.0` |
 *   **Efficient Build**: Optimized Docker build process to ensure correct hardware drivers are loaded.
 
 ### 🤖 New TTS Engine: Supertonic
