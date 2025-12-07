@@ -1,4 +1,4 @@
-# 📚 ebook2audiobook
+# 📚 Ebook2Audiobook TOV 25.15
 CPU/GPU Converter from eBooks to audiobooks with chapters and metadata<br/>
 using XTTSv2, Bark, Vits, Fairseq, YourTTS, Tacotron2 and more. Supports voice cloning and +1110 languages!
 > [!IMPORTANT]
