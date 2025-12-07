@@ -1,6 +1,6 @@
 # 🌩️ Oracle Cloud Free Tier Deployment Guide
 
-Deploy **Ebook2Audiobook TOV 25.15** on Oracle Cloud's Always Free Tier for a free, always-on audiobook converter.
+Deploy **Ebook2Audiobook** on Oracle Cloud's Always Free Tier for a free, always-on audiobook converter.
 
 ## 📋 Prerequisites
 
@@ -117,14 +117,17 @@ Then SSH back in.
 ```bash
 # Clone the repository
 git clone https://github.com/3453-315h/ebook2audiobook-theotherversion.git
-cd ebook2audiobook-theotherversion/oracle
+cd ebook2audiobook-theotherversion
 
-# Start the application (first run will take 10-15 minutes to build)
-docker compose up -d --build
+# Start the application using the Oracle-optimized configuration
+# (first run will take 10-15 minutes to build)
+docker compose -f oracle/docker-compose.yml up -d --build
 
 # Check logs
 docker logs -f ebook2audiobook
 ```
+
+> **Note**: The `oracle/docker-compose.yml` is specifically optimized for ARM64 architecture with CPU-only settings. It also sets memory limits to 12GB, leaving room for other processes on your 24GB instance.
 
 ### Step 7: Access the Web UI
 
@@ -139,10 +142,11 @@ http://YOUR_PUBLIC_IP:7860
 
 ### Docker Compose for ARM64 (Ampere A1)
 
-The `docker-compose.yml` in this folder is pre-configured for:
+The `oracle/docker-compose.yml` is pre-configured for:
 - ARM64 architecture (Ampere A1)
 - CPU-only operation (no GPU on free tier)
-- Optimized memory settings for 24GB RAM
+- Optimized memory settings (12GB limit) for 24GB RAM instances
+- Automatic restart on failure (`unless-stopped`)
 
 ### Recommended TTS Engines for Free Tier
 
@@ -150,9 +154,10 @@ The `docker-compose.yml` in this folder is pre-configured for:
 |--------|-------------|-------|----------------|
 | **VITS** | ~2GB | Fast | ⭐ Best for Free Tier |
 | **Fairseq** | ~3GB | Fast | ✅ Good for Free Tier |
+| **Tacotron2** | ~3GB | Fast | ✅ Good for Free Tier |
 | **YourTTS** | ~4GB | Medium | ✅ Works on Free Tier |
-| **XTTSv2** | ~6GB | Slow | ⚠️ May be slow |
-| **Supertonic** | ~8GB | Medium | ⚠️ Check memory |
+| **XTTSv2** | ~6GB | Slow | ⚠️ May be slow on ARM |
+| **Supertonic** | ~8GB | Medium | ⚠️ Check memory usage |
 | **Bark** | ~12GB | Very Slow | ❌ Not recommended |
 
 ---
@@ -160,11 +165,11 @@ The `docker-compose.yml` in this folder is pre-configured for:
 ## 📁 Storage Options
 
 ### Option A: Local Storage (Default)
-Audiobooks are saved in `./audiobooks/` on the instance.
+Audiobooks are saved in `./audiobooks/` on the instance (mapped via docker-compose).
 
 ```bash
 # Download audiobooks via SCP
-scp -i ~/Downloads/ssh-key.key ubuntu@YOUR_PUBLIC_IP:~/ebook2audiobook-theotherversion/audiobooks/*.m4b ./
+scp -i ~/Downloads/ssh-key.key ubuntu@YOUR_PUBLIC_IP:~/ebook2audiobook-theotherversion/oracle/audiobooks/*.m4b ./
 ```
 
 ### Option B: Oracle Object Storage (Optional)
@@ -193,15 +198,17 @@ s3fs your-bucket-name ~/audiobooks-cloud \
 ### Starting/Stopping the Service
 
 ```bash
+# Navigate to the repo directory
+cd ~/ebook2audiobook-theotherversion
+
 # Stop
-cd ~/ebook2audiobook-theotherversion/oracle
-docker compose down
+docker compose -f oracle/docker-compose.yml down
 
 # Start
-docker compose up -d
+docker compose -f oracle/docker-compose.yml up -d
 
 # Restart
-docker compose restart
+docker compose -f oracle/docker-compose.yml restart
 
 # View logs
 docker logs -f ebook2audiobook
@@ -212,8 +219,7 @@ docker logs -f ebook2audiobook
 ```bash
 cd ~/ebook2audiobook-theotherversion
 git pull
-cd oracle
-docker compose up -d --build --force-recreate
+docker compose -f oracle/docker-compose.yml up -d --build --force-recreate
 ```
 
 ### Monitoring Resources
@@ -234,20 +240,21 @@ df -h
 ## ⚠️ Troubleshooting
 
 ### "Out of Memory" Errors
-- Use lighter TTS engines (VITS, Fairseq)
-- Reduce `SUNO_USE_SMALL_MODELS=True` for Bark
+- Use lighter TTS engines (VITS, Fairseq, Tacotron2)
+- Set `SUNO_USE_SMALL_MODELS=True` for Bark (already set in docker-compose)
 - Process smaller ebooks
 
 ### "Cannot connect to port 7860"
 1. Check instance is running: Oracle Console → Compute → Instances
 2. Verify security list rules (port 7860 ingress)
-3. Check instance firewall: `sudo firewall-cmd --list-ports`
+3. Check instance firewall: `sudo firewall-cmd --list-ports` or `sudo ufw status`
+4. Ensure the container is running: `docker ps`
 
 ### Build Fails
 ```bash
 # Clear Docker cache and rebuild
 docker system prune -af
-docker compose up -d --build --no-cache
+docker compose -f oracle/docker-compose.yml up -d --build --no-cache
 ```
 
 ### SSH Connection Refused
@@ -263,6 +270,7 @@ docker compose up -d --build --no-cache
 2. **Use lightweight engines** - VITS and Fairseq work best on ARM
 3. **Process ebooks in batches** - Don't overload with huge books
 4. **Monitor your usage** - Stay within 10TB/month outbound data
+5. **Set up monitoring** - Use `docker stats` to watch memory usage
 
 ---
 
