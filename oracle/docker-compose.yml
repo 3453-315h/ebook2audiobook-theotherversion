@@ -26,13 +26,13 @@ services:
     tty: true
     stdin_open: true
 
-    # Memory limits for 24GB free tier instance
+    # Memory limits - 12GB for ebook2audiobook, leaving 12GB for other projects
     deploy:
       resources:
         limits:
-          memory: 20G # Leave 4GB for OS
+          memory: 12G
         reservations:
-          memory: 8G
+          memory: 4G
 
     ports:
       - 7860:7860
